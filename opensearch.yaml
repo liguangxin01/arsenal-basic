@@ -61,12 +61,6 @@ spec:
               value: "-Xms512m -Xmx512m"
             - name: DISABLE_SECURITY_PLUGIN
               value: "true"
-            - name: OPENSEARCH_SECURITY_SSL_TRANSPORT_PEMCERT_FILEPATH
-              value: /usr/share/opensearch/config/certs/cert.pem
-            - name: OPENSEARCH_SECURITY_SSL_TRANSPORT_PEMKEY_FILEPATH
-              value: /usr/share/opensearch/config/certs/key.pem
-            - name: OPENSEARCH_SECURITY_SSL_TRANSPORT_PEMTRUSTEDCAS_FILEPATH
-              value: /usr/share/opensearch/config/certs/ca.pem
           securityContext:
             privileged: true
             capabilities:
@@ -77,15 +71,9 @@ spec:
           volumeMounts:
             - name: opensearch-data
               mountPath: /usr/share/opensearch/data
-            - name: opensearch-certs
-              mountPath: /usr/share/opensearch/config/certs
       volumes:
         - name: opensearch-data
           emptyDir: {}
-        - name: opensearch-certs
-          secret:
-            secretName: opensearch-certs
-
 ---
 apiVersion: v1
 kind: Service
@@ -143,6 +131,36 @@ spec:
             port:
               number: 5601
   - host: search.opensearch.com
+    http:
+      paths:
+      - pathType: Prefix
+        path: "/"
+        backend:
+          service:
+            name: opensearch
+            port:
+              number: 9200
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: opensearch-ingress-whitelist
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    nginx.ingress.kubernetes.io/whitelist-source-range: "39.107.243.62"
+spec:
+  rules:
+  - host: arsenal-logs.lingyiwanwu.net
+    http:
+      paths:
+      - pathType: Prefix
+        path: "/"
+        backend:
+          service:
+            name: opensearch-dashboards
+            port:
+              number: 5601
+  - host: arsenal-search.lingyiwanwu.net  #api访问级别的还有问题，场景不对，类似postman就访问不了 
     http:
       paths:
       - pathType: Prefix
